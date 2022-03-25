@@ -18,13 +18,13 @@ import sg.edu.nus.ssf_assessment.service.QuotationService;
 @RequestMapping(path = "/api", produces = MediaType.APPLICATION_JSON_VALUE)
 public class PurchaseOrderRestController {
     @Autowired
-    QuotationService quoteSvc;
+    private QuotationService quoteSvc;
 
     @PostMapping("/po")
     public ResponseEntity<String> postPo(@RequestBody String payload) {
         Optional<JsonObject> opt = quoteSvc.calculateCost(payload);
         if (opt.isEmpty()) {
-            ResponseEntity.status(404).body(Json.createObjectBuilder().build().toString());
+            return ResponseEntity.status(404).body(Json.createObjectBuilder().build().toString());
         }
         return ResponseEntity.ok(opt.get().toString());
     }
