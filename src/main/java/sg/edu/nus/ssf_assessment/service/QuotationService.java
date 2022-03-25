@@ -55,9 +55,7 @@ public class QuotationService {
             ab.add(i);
         JsonArray arr = ab.build();
         // Make HTTP call to QSys
-        String url = UriComponentsBuilder.fromUriString(URL)
-                .toUriString();
-        RequestEntity<String> req = RequestEntity.post(url)
+        RequestEntity<String> req = RequestEntity.post(URL)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(arr.toString(), String.class);
         RestTemplate template = new RestTemplate();
