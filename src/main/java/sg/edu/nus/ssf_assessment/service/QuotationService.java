@@ -8,7 +8,6 @@ import java.util.Optional;
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
@@ -27,14 +26,15 @@ public class QuotationService {
     private static final String URL = "https://quotation.chuklee.com/quotation";
 
     public Optional<JsonObject> calculateCost(String json) {
+        System.out.println(">>>>>>>>Request received:" + json);
         DocumentContext jsonContext = JsonPath.parse(json);
         List<Map<String, Object>> list = jsonContext.read("$.lineItems");
         List<String> itemList = list.stream().map(m -> (String) m.get("item")).toList();
-        System.out.println(itemList);
         Optional<Quotation> opt = getQuotations(itemList);
         if (opt.isEmpty())
             return Optional.empty();
-        System.out.println("Calculating cost");
+        // Calculate total cost
+        System.out.println(">>>>>>>>Calculating cost");
         Quotation q = opt.get();
         double total = 0.0;
         for (Map<String, Object> m : list) {
@@ -51,35 +51,35 @@ public class QuotationService {
 
     public Optional<Quotation> getQuotations(List<String> items) {
         JsonArrayBuilder ab = Json.createArrayBuilder();
-        for (String i : items) {
+        for (String i : items)
             ab.add(i);
-        }
         JsonArray arr = ab.build();
+        // Make HTTP call to QSys
         String url = UriComponentsBuilder.fromUriString(URL)
                 .toUriString();
-        RequestEntity<String> req = RequestEntity.post(url).contentType(MediaType.APPLICATION_JSON).body(arr.toString(),
-                String.class);
+        RequestEntity<String> req = RequestEntity.post(url)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(arr.toString(), String.class);
         RestTemplate template = new RestTemplate();
-        ResponseEntity<String> resp = new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         try {
-            resp = template.exchange(req, String.class);
+            ResponseEntity<String> resp = template.exchange(req, String.class);
+            System.out.println(">>>>>>>>API response:" + resp.getBody());
+            // Marshal Json object into Quotation object
+            Quotation quote = new Quotation();
+            DocumentContext jsonContext = JsonPath.parse(resp.getBody());
+            quote.setQuoteId(jsonContext.read("$.quoteId"));
+            List<Map<String, Object>> priceList = jsonContext.read("$.quotations");
+            Map<String, Float> quotations = new HashMap<>();
+            for (Map<String, Object> m : priceList) {
+                String item = (String) m.get("item");
+                Float price = ((Number) m.get("unitPrice")).floatValue();
+                quotations.put(item, price);
+            }
+            quote.setQuotations(quotations);
+            return Optional.of(quote);
         } catch (Exception e) {
-            System.out.println("API request failed");
+            System.out.println(">>>>>>>>API request failed");
             return Optional.empty();
         }
-        Quotation quote = new Quotation();
-        DocumentContext jsonContext = JsonPath.parse(resp.getBody());
-        quote.setQuoteId(jsonContext.read("$.quoteId"));
-        List<Map<String, Object>> priceList = jsonContext.read("$.quotations");
-        Map<String, Float> quotations = new HashMap<>();
-        System.out.println(priceList);
-        for (Map<String, Object> m : priceList) {
-            String item = (String) m.get("item");
-            Float price = ((Number) m.get("unitPrice")).floatValue();
-            quotations.put(item, price);
-        }
-        System.out.println(quotations);
-        quote.setQuotations(quotations);
-        return Optional.of(quote);
     }
 }

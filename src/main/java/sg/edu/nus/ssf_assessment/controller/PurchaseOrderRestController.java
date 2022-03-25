@@ -23,9 +23,9 @@ public class PurchaseOrderRestController {
     @PostMapping("/po")
     public ResponseEntity<String> postPo(@RequestBody String payload) {
         Optional<JsonObject> opt = quoteSvc.calculateCost(payload);
-        if (opt.isEmpty()) {
+        // If quotation is null, returns error 404 not found
+        if (opt.isEmpty())
             return ResponseEntity.status(404).body(Json.createObjectBuilder().build().toString());
-        }
         return ResponseEntity.ok(opt.get().toString());
     }
 }
